@@ -180,7 +180,7 @@ class WebService {
       final response = await http.get(
         Uri.parse('$baseUrl/$endpoint'),
         headers: {
-          'Content-Type': 'application/json',
+          'Content-Type': 'application/json; charset=UTF-8',
           'X-Tenant': tenantId, // Add tenant ID to headers
         },
       );
