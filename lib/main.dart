@@ -19,7 +19,7 @@ class AdminConsoleApp extends StatelessWidget {
     return MultiRepositoryProvider(
       providers: [
         RepositoryProvider<WebService>(
-          create: (context) => WebService(baseUrl: 'https://web-test-5149.up.railway.app/api/v1'),
+          create: (context) => WebService(baseUrl: 'https://web-production-28310.up.railway.app/api/v1'),
         ),
         RepositoryProvider<TenantRepository>(
           create: (context) => TenantRepository(
