@@ -6,7 +6,7 @@ import 'repositories/tenant_repository.dart';
 import 'repositories/dashboard_repository.dart';
 import 'repositories/administration_repository.dart';
 import 'services/web_service.dart';
-import 'screens/tenants_screen.dart';
+import 'screens/auth_screen.dart';
 import 'bloc/administration/administration_bloc.dart';
 
 void main() {
@@ -63,7 +63,7 @@ class AdminConsoleApp extends StatelessWidget {
             primarySwatch: Colors.blue,
             visualDensity: VisualDensity.adaptivePlatformDensity,
           ),
-          home: const TenantsScreen(),
+          home: const AuthScreen(),
         ),
       ),
     );
