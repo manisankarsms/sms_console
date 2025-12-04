@@ -21,3 +21,16 @@ class CreateUser extends AdministrationEvent {
 
   CreateUser({required this.tenantId, required this.user});
 }
+
+class LoadAdminUsers extends AdministrationEvent {
+  final String tenantId;
+
+  LoadAdminUsers(this.tenantId);
+}
+
+class DeleteUser extends AdministrationEvent {
+  final String tenantId;
+  final String userId;
+
+  DeleteUser({required this.tenantId, required this.userId});
+}

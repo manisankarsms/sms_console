@@ -1,6 +1,7 @@
 // dashboard_screen.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:intl/intl.dart';
 import '../bloc/dashboard/dashboard_bloc.dart';
 import '../bloc/dashboard/dashboard_event.dart';
 import '../bloc/dashboard/dashboard_state.dart';
@@ -30,7 +31,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
   final _yearController = TextEditingController();
   final _startDateController = TextEditingController();
   final _endDateController = TextEditingController();
+  final _yearOptions = <String>[];
+  String? _selectedYearOption;
+  bool _useCustomYear = false;
   bool _isAcademicYearActive = true;
+
+  final DateFormat _dateFormatter = DateFormat('yyyy-MM-dd');
 
   final _emailController = TextEditingController();
   final _mobileController = TextEditingController();
@@ -45,6 +51,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
     // Load dashboard data with tenant ID
     context.read<DashboardBloc>().add(LoadDashboardData(widget.tenant.id!));
     context.read<AdministrationBloc>().add(LoadAcademicYears(widget.tenant.id!));
+    context.read<AdministrationBloc>().add(LoadAdminUsers(widget.tenant.id!));
+
+    final currentYear = DateTime.now().year;
+    for (int i = 0; i < 5; i++) {
+      final startYear = currentYear + i;
+      _yearOptions.add('$startYear-${startYear + 1}');
+    }
+    _selectedYearOption = _yearOptions.isNotEmpty ? _yearOptions.first : null;
+    if (_selectedYearOption != null) {
+      _yearController.text = _selectedYearOption!;
+    }
   }
 
   @override
@@ -61,7 +78,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   void _resetAcademicYearForm() {
-    _yearController.clear();
+    _useCustomYear = false;
+    _selectedYearOption = _yearOptions.isNotEmpty ? _yearOptions.first : null;
+    _yearController.text = _selectedYearOption ?? '';
     _startDateController.clear();
     _endDateController.clear();
     setState(() {
@@ -78,6 +97,47 @@ class _DashboardScreenState extends State<DashboardScreen> {
     setState(() {
       _selectedRole = 'ADMIN';
     });
+  }
+
+  Future<void> _pickDate(TextEditingController controller, {DateTime? initialDate}) async {
+    final now = DateTime.now();
+    final selectedDate = await showDatePicker(
+      context: context,
+      initialDate: initialDate ?? now,
+      firstDate: DateTime(now.year - 5),
+      lastDate: DateTime(now.year + 5),
+    );
+
+    if (selectedDate != null) {
+      controller.text = _dateFormatter.format(selectedDate);
+    }
+  }
+
+  void _confirmDeleteUser(String userId) {
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Delete user'),
+        content: const Text('Are you sure you want to remove this administrator?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            onPressed: () {
+              context.read<AdministrationBloc>().add(DeleteUser(
+                    tenantId: widget.tenant.id!,
+                    userId: userId,
+                  ));
+              Navigator.of(context).pop();
+            },
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -179,7 +239,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Widget _buildDashboardContent(DashboardData data, AdministrationState adminState) {
     final academicYears = _academicYearsFromState(adminState);
-    final isAdminLoading = adminState is AdministrationLoading && academicYears.isEmpty;
+    final adminUsers = _adminUsersFromState(adminState);
+    final isAdminLoading = adminState is AdministrationLoading && academicYears.isEmpty && adminUsers.isEmpty;
     return SingleChildScrollView(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -189,7 +250,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             padding: const EdgeInsets.all(16),
             child: Column(
               children: [
-                _buildManagementSection(adminState, academicYears, isAdminLoading),
+                _buildManagementSection(adminState, academicYears, adminUsers, isAdminLoading),
                 const SizedBox(height: 24),
                 _buildOverviewSection(data.overview),
                 const SizedBox(height: 24),
@@ -223,12 +284,27 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return [];
   }
 
+  List<AdminUser> _adminUsersFromState(AdministrationState state) {
+    if (state is AdministrationLoaded) {
+      return state.adminUsers;
+    }
+    if (state is AdministrationOperationInProgress) {
+      return state.adminUsers;
+    }
+    if (state is AdministrationFailure) {
+      return state.adminUsers;
+    }
+    return [];
+  }
+
   Widget _buildManagementSection(
     AdministrationState adminState,
     List<AcademicYear> academicYears,
+    List<AdminUser> adminUsers,
     bool isAdminLoading,
   ) {
     final isProcessing = adminState is AdministrationOperationInProgress;
+    final isUserOperation = isProcessing && adminState.message.toLowerCase().contains('user');
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -269,6 +345,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   width: itemWidth,
                   child: _buildAcademicYearListCard(academicYears, adminState, isAdminLoading),
                 ),
+                SizedBox(
+                  width: itemWidth,
+                  child: _buildAdminUsersCard(adminUsers, adminState, isAdminLoading || isUserOperation),
+                ),
               ],
             );
           },
@@ -285,25 +365,77 @@ class _DashboardScreenState extends State<DashboardScreen> {
         key: _academicYearFormKey,
         child: Column(
           children: [
-            TextFormField(
-              controller: _yearController,
+            DropdownButtonFormField<String>(
+              value: _selectedYearOption,
               decoration: const InputDecoration(
                 labelText: 'Academic Year',
                 hintText: '2025-2026',
                 border: OutlineInputBorder(),
               ),
-              validator: (value) => value == null || value.trim().isEmpty ? 'Enter the academic year label' : null,
+              items: [
+                ..._yearOptions.map((option) => DropdownMenuItem(value: option, child: Text(option))),
+                const DropdownMenuItem(value: 'custom', child: Text('Custom year label')),
+              ],
+              onChanged: isProcessing || isAdminLoading
+                  ? null
+                  : (value) {
+                      if (value == null) return;
+                      setState(() {
+                        _selectedYearOption = value;
+                        _useCustomYear = value == 'custom';
+                        if (!_useCustomYear) {
+                          _yearController.text = value;
+                        } else {
+                          _yearController.clear();
+                        }
+                      });
+                    },
+              validator: (value) {
+                if (_useCustomYear && _yearController.text.trim().isEmpty) {
+                  return 'Enter a custom year label';
+                }
+                if (!_useCustomYear && (value == null || value.isEmpty)) {
+                  return 'Select the academic year label';
+                }
+                return null;
+              },
             ),
+            if (_useCustomYear) ...[
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: _yearController,
+                decoration: const InputDecoration(
+                  labelText: 'Custom Academic Year',
+                  hintText: 'e.g., 2025-2026',
+                  border: OutlineInputBorder(),
+                ),
+                validator: (value) {
+                  if (!_useCustomYear) return null;
+                  if (value == null || value.trim().isEmpty) {
+                    return 'Enter the academic year label';
+                  }
+                  return null;
+                },
+              ),
+            ],
             const SizedBox(height: 12),
             Row(
               children: [
                 Expanded(
                   child: TextFormField(
                     controller: _startDateController,
+                    readOnly: true,
+                    onTap: isProcessing || isAdminLoading
+                        ? null
+                        : () => _pickDate(
+                              _startDateController,
+                              initialDate: DateTime.tryParse(_startDateController.text),
+                            ),
                     decoration: const InputDecoration(
                       labelText: 'Start Date',
                       hintText: 'YYYY-MM-DD',
                       border: OutlineInputBorder(),
+                      suffixIcon: Icon(Icons.calendar_today_rounded),
                     ),
                     validator: (value) => value == null || value.trim().isEmpty ? 'Required' : null,
                   ),
@@ -312,10 +444,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 Expanded(
                   child: TextFormField(
                     controller: _endDateController,
+                    readOnly: true,
+                    onTap: isProcessing || isAdminLoading
+                        ? null
+                        : () => _pickDate(
+                              _endDateController,
+                              initialDate: DateTime.tryParse(_endDateController.text),
+                            ),
                     decoration: const InputDecoration(
                       labelText: 'End Date',
                       hintText: 'YYYY-MM-DD',
                       border: OutlineInputBorder(),
+                      suffixIcon: Icon(Icons.calendar_today_rounded),
                     ),
                     validator: (value) => value == null || value.trim().isEmpty ? 'Required' : null,
                   ),
@@ -342,8 +482,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     ? null
                     : () {
                         if (_academicYearFormKey.currentState?.validate() != true) return;
+                        final selectedYear = _useCustomYear ? _yearController.text.trim() : (_selectedYearOption ?? '');
+                        if (selectedYear.isEmpty) return;
                         final academicYear = AcademicYear(
-                          year: _yearController.text.trim(),
+                          year: selectedYear,
                           startDate: _startDateController.text.trim(),
                           endDate: _endDateController.text.trim(),
                           isActive: _isAcademicYearActive,
@@ -573,6 +715,87 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                 style: TextStyle(color: Color(0xFF2B88F0), fontWeight: FontWeight.bold),
                               ),
                             ),
+                        ],
+                      ),
+                    ),
+                  ),
+                if (adminState is AdministrationFailure)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 8),
+                    child: Text(
+                      adminState.error,
+                      style: const TextStyle(color: Colors.red),
+                    ),
+                  ),
+              ],
+            ),
+    );
+  }
+
+  Widget _buildAdminUsersCard(
+    List<AdminUser> adminUsers,
+    AdministrationState adminState,
+    bool isLoading,
+  ) {
+    return _SectionCard(
+      title: 'Admin Users',
+      subtitle: 'Manage console administrators',
+      action: IconButton(
+        tooltip: 'Refresh',
+        onPressed: isLoading
+            ? null
+            : () => context.read<AdministrationBloc>().add(LoadAdminUsers(widget.tenant.id!)),
+        icon: const Icon(Icons.refresh),
+      ),
+      child: isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : Column(
+              children: [
+                if (adminUsers.isEmpty)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    child: Text(
+                      'No admin users found for this tenant.',
+                      style: TextStyle(color: Colors.grey.shade700),
+                    ),
+                  )
+                else
+                  ...adminUsers.map(
+                    (user) => Container(
+                      margin: const EdgeInsets.only(bottom: 10),
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.grey.shade300),
+                      ),
+                      child: Row(
+                        children: [
+                          CircleAvatar(
+                            backgroundColor: const Color(0xFF2B88F0).withOpacity(0.12),
+                            child: Text(user.firstName.isNotEmpty ? user.firstName[0].toUpperCase() : '?'),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  '${user.firstName} ${user.lastName}'.trim(),
+                                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(user.email, style: TextStyle(color: Colors.grey.shade700)),
+                                const SizedBox(height: 2),
+                                Text('Mobile: ${user.mobileNumber}', style: TextStyle(color: Colors.grey.shade700)),
+                              ],
+                            ),
+                          ),
+                          IconButton(
+                            tooltip: 'Delete user',
+                            onPressed: isLoading ? null : () => _confirmDeleteUser(user.id),
+                            icon: const Icon(Icons.delete, color: Colors.redAccent),
+                          ),
                         ],
                       ),
                     ),
