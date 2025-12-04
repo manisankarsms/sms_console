@@ -177,13 +177,27 @@ class WebService {
 
   Future<String> fetchDataWithTenantId(String endpoint, String tenantId) async {
     try {
+      final sanitizedBaseUrl = baseUrl.replaceAll(RegExp(r'/+$'), '');
+      final sanitizedEndpoint = endpoint.replaceAll(RegExp(r'^/+'), '');
+      final uri = Uri.parse('$sanitizedBaseUrl/$sanitizedEndpoint');
+
+      if (kDebugMode) {
+        print('GET URL: $uri');
+        print('X-Tenant: ${tenantId.trim()}');
+      }
+
       final response = await http.get(
-        Uri.parse('$baseUrl/$endpoint'),
+        uri,
         headers: {
           'Content-Type': 'application/json; charset=UTF-8',
-          'X-Tenant': tenantId, // Add tenant ID to headers
+          'X-Tenant': tenantId.trim(),
         },
       );
+
+      if (kDebugMode) {
+        print('Response Status: ${response.statusCode}');
+        print('Response Body: ${response.body}');
+      }
 
       if (response.statusCode == 200) {
         return response.body;
