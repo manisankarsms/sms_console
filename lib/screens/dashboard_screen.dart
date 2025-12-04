@@ -429,7 +429,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   ? null
                   : () {
                       if (_userFormKey.currentState?.validate() != true) return;
-                      final user = AdminUser(
+                      final user = UserPayload(
                         email: _emailController.text.trim(),
                         mobileNumber: _mobileController.text.trim(),
                         password: _passwordController.text.trim(),
