@@ -4,6 +4,10 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../bloc/dashboard/dashboard_bloc.dart';
 import '../bloc/dashboard/dashboard_event.dart';
 import '../bloc/dashboard/dashboard_state.dart';
+import '../bloc/administration/administration_bloc.dart';
+import '../bloc/administration/administration_event.dart';
+import '../bloc/administration/administration_state.dart';
+import '../models/administration.dart';
 import '../models/dashboard.dart';
 import '../models/tenant.dart';
 
@@ -20,11 +24,60 @@ class DashboardScreen extends StatefulWidget {
 }
 
 class _DashboardScreenState extends State<DashboardScreen> {
+  final _academicYearFormKey = GlobalKey<FormState>();
+  final _userFormKey = GlobalKey<FormState>();
+
+  final _yearController = TextEditingController();
+  final _startDateController = TextEditingController();
+  final _endDateController = TextEditingController();
+  bool _isAcademicYearActive = true;
+
+  final _emailController = TextEditingController();
+  final _mobileController = TextEditingController();
+  final _passwordController = TextEditingController();
+  final _firstNameController = TextEditingController();
+  final _lastNameController = TextEditingController();
+  String _selectedRole = 'ADMIN';
+
   @override
   void initState() {
     super.initState();
     // Load dashboard data with tenant ID
     context.read<DashboardBloc>().add(LoadDashboardData(widget.tenant.id!));
+    context.read<AdministrationBloc>().add(LoadAcademicYears(widget.tenant.id!));
+  }
+
+  @override
+  void dispose() {
+    _yearController.dispose();
+    _startDateController.dispose();
+    _endDateController.dispose();
+    _emailController.dispose();
+    _mobileController.dispose();
+    _passwordController.dispose();
+    _firstNameController.dispose();
+    _lastNameController.dispose();
+    super.dispose();
+  }
+
+  void _resetAcademicYearForm() {
+    _yearController.clear();
+    _startDateController.clear();
+    _endDateController.clear();
+    setState(() {
+      _isAcademicYearActive = true;
+    });
+  }
+
+  void _resetUserForm() {
+    _emailController.clear();
+    _mobileController.clear();
+    _passwordController.clear();
+    _firstNameController.clear();
+    _lastNameController.clear();
+    setState(() {
+      _selectedRole = 'ADMIN';
+    });
   }
 
   @override
@@ -46,50 +99,87 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ),
         ],
       ),
-      body: BlocConsumer<DashboardBloc, DashboardState>(
-        listener: (context, state) {
-          if (state is DashboardOperationFailure) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(state.error),
-                backgroundColor: Colors.red,
-              ),
-            );
-          }
-        },
-        builder: (context, state) {
-          if (state is DashboardLoading) {
+      body: MultiBlocListener(
+        listeners: [
+          BlocListener<AdministrationBloc, AdministrationState>(
+            listener: (context, adminState) {
+              if (adminState is AdministrationLoaded && adminState.message != null) {
+                if (adminState.message!.contains('Academic year')) {
+                  _resetAcademicYearForm();
+                }
+                if (adminState.message!.contains('User created')) {
+                  _resetUserForm();
+                }
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(adminState.message!),
+                    backgroundColor: Colors.green,
+                  ),
+                );
+              } else if (adminState is AdministrationFailure) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(adminState.error),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+              }
+            },
+          ),
+          BlocListener<DashboardBloc, DashboardState>(
+            listener: (context, state) {
+              if (state is DashboardOperationFailure) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(state.error),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+              }
+            },
+          ),
+        ],
+        child: BlocBuilder<DashboardBloc, DashboardState>(
+          builder: (context, state) {
+            if (state is DashboardLoading) {
+              return const Center(child: CircularProgressIndicator());
+            } else if (state is DashboardLoaded) {
+              return BlocBuilder<AdministrationBloc, AdministrationState>(
+                builder: (context, adminState) {
+                  return _buildDashboardContent(state.dashboardData, adminState);
+                },
+              );
+            } else if (state is DashboardOperationFailure) {
+              return Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.error, size: 64, color: Colors.red),
+                    const SizedBox(height: 16),
+                    Text(
+                      "Error: ${state.error}",
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(color: Colors.red),
+                    ),
+                    const SizedBox(height: 16),
+                    ElevatedButton(
+                      onPressed: () => context.read<DashboardBloc>().add(LoadDashboardData(widget.tenant.id!)),
+                      child: const Text("Retry"),
+                    ),
+                  ],
+                ),
+              );
+            }
             return const Center(child: CircularProgressIndicator());
-          } else if (state is DashboardLoaded) {
-            return _buildDashboardContent(state.dashboardData);
-          } else if (state is DashboardOperationFailure) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(Icons.error, size: 64, color: Colors.red),
-                  const SizedBox(height: 16),
-                  Text(
-                    "Error: ${state.error}",
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(color: Colors.red),
-                  ),
-                  const SizedBox(height: 16),
-                  ElevatedButton(
-                    onPressed: () => context.read<DashboardBloc>().add(LoadDashboardData(widget.tenant.id!)),
-                    child: const Text("Retry"),
-                  ),
-                ],
-              ),
-            );
-          }
-          return const Center(child: CircularProgressIndicator());
-        },
+          },
+        ),
       ),
     );
   }
 
-  Widget _buildDashboardContent(DashboardData data) {
+  Widget _buildDashboardContent(DashboardData data, AdministrationState adminState) {
+    final academicYears = _academicYearsFromState(adminState);
+    final isAdminLoading = adminState is AdministrationLoading && academicYears.isEmpty;
     return SingleChildScrollView(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -99,6 +189,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
             padding: const EdgeInsets.all(16),
             child: Column(
               children: [
+                _buildManagementSection(adminState, academicYears, isAdminLoading),
+                const SizedBox(height: 24),
                 _buildOverviewSection(data.overview),
                 const SizedBox(height: 24),
                 _buildStudentStatistics(data.studentStatistics),
@@ -115,6 +207,386 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  List<AcademicYear> _academicYearsFromState(AdministrationState state) {
+    if (state is AdministrationLoaded) {
+      return state.academicYears;
+    }
+    if (state is AdministrationOperationInProgress) {
+      return state.academicYears;
+    }
+    if (state is AdministrationFailure) {
+      return state.academicYears;
+    }
+    return [];
+  }
+
+  Widget _buildManagementSection(
+    AdministrationState adminState,
+    List<AcademicYear> academicYears,
+    bool isAdminLoading,
+  ) {
+    final isProcessing = adminState is AdministrationOperationInProgress;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: const [
+            Icon(Icons.settings, color: Colors.blueAccent),
+            SizedBox(width: 8),
+            Text(
+              'Setup & Administration',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final crossAxisCount = constraints.maxWidth > 1100
+                ? 3
+                : constraints.maxWidth > 780
+                    ? 2
+                    : 1;
+            final itemWidth = (constraints.maxWidth - (16 * (crossAxisCount - 1))) / crossAxisCount;
+
+            return Wrap(
+              spacing: 16,
+              runSpacing: 16,
+              children: [
+                SizedBox(
+                  width: itemWidth,
+                  child: _buildAcademicYearCard(isProcessing, isAdminLoading),
+                ),
+                SizedBox(
+                  width: itemWidth,
+                  child: _buildUserCard(isProcessing),
+                ),
+                SizedBox(
+                  width: itemWidth,
+                  child: _buildAcademicYearListCard(academicYears, adminState, isAdminLoading),
+                ),
+              ],
+            );
+          },
+        ),
+      ],
+    );
+  }
+
+  Widget _buildAcademicYearCard(bool isProcessing, bool isAdminLoading) {
+    return _SectionCard(
+      title: 'Create Academic Year',
+      subtitle: 'Publish academic windows that other modules can reference',
+      child: Form(
+        key: _academicYearFormKey,
+        child: Column(
+          children: [
+            TextFormField(
+              controller: _yearController,
+              decoration: const InputDecoration(
+                labelText: 'Academic Year',
+                hintText: '2025-2026',
+                border: OutlineInputBorder(),
+              ),
+              validator: (value) => value == null || value.trim().isEmpty ? 'Enter the academic year label' : null,
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: TextFormField(
+                    controller: _startDateController,
+                    decoration: const InputDecoration(
+                      labelText: 'Start Date',
+                      hintText: 'YYYY-MM-DD',
+                      border: OutlineInputBorder(),
+                    ),
+                    validator: (value) => value == null || value.trim().isEmpty ? 'Required' : null,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: TextFormField(
+                    controller: _endDateController,
+                    decoration: const InputDecoration(
+                      labelText: 'End Date',
+                      hintText: 'YYYY-MM-DD',
+                      border: OutlineInputBorder(),
+                    ),
+                    validator: (value) => value == null || value.trim().isEmpty ? 'Required' : null,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              value: _isAcademicYearActive,
+              onChanged: (value) {
+                setState(() {
+                  _isAcademicYearActive = value;
+                });
+              },
+              title: const Text('Mark as active'),
+              subtitle: const Text('Sets this year as the active calendar for the tenant'),
+            ),
+            const SizedBox(height: 8),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: isProcessing || isAdminLoading
+                    ? null
+                    : () {
+                        if (_academicYearFormKey.currentState?.validate() != true) return;
+                        final academicYear = AcademicYear(
+                          year: _yearController.text.trim(),
+                          startDate: _startDateController.text.trim(),
+                          endDate: _endDateController.text.trim(),
+                          isActive: _isAcademicYearActive,
+                        );
+
+                        context.read<AdministrationBloc>().add(
+                              CreateAcademicYear(
+                                tenantId: widget.tenant.id!,
+                                academicYear: academicYear,
+                              ),
+                            );
+                      },
+                icon: isProcessing || isAdminLoading
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                      )
+                    : const Icon(Icons.save),
+                label: Text(isProcessing || isAdminLoading ? 'Working...' : 'Create Academic Year'),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildUserCard(bool isProcessing) {
+    return _SectionCard(
+      title: 'Create Console User',
+      subtitle: 'Quickly provision administrators for this tenant',
+      child: Form(
+        key: _userFormKey,
+        child: Column(
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: TextFormField(
+                    controller: _firstNameController,
+                    decoration: const InputDecoration(
+                      labelText: 'First Name',
+                      border: OutlineInputBorder(),
+                    ),
+                    validator: (value) => value == null || value.trim().isEmpty ? 'Required' : null,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: TextFormField(
+                    controller: _lastNameController,
+                    decoration: const InputDecoration(
+                      labelText: 'Last Name',
+                      border: OutlineInputBorder(),
+                    ),
+                    validator: (value) => value == null || value.trim().isEmpty ? 'Required' : null,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            TextFormField(
+              controller: _emailController,
+              decoration: const InputDecoration(
+                labelText: 'Email',
+                border: OutlineInputBorder(),
+              ),
+              validator: (value) {
+                if (value == null || value.trim().isEmpty) return 'Required';
+                if (!value.contains('@')) return 'Enter a valid email';
+                return null;
+              },
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: TextFormField(
+                    controller: _mobileController,
+                    decoration: const InputDecoration(
+                      labelText: 'Mobile Number',
+                      border: OutlineInputBorder(),
+                    ),
+                    validator: (value) => value == null || value.trim().isEmpty ? 'Required' : null,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: DropdownButtonFormField<String>(
+                    value: _selectedRole,
+                    decoration: const InputDecoration(
+                      labelText: 'Role',
+                      border: OutlineInputBorder(),
+                    ),
+                    items: const [
+                      DropdownMenuItem(value: 'ADMIN', child: Text('ADMIN')),
+                    ],
+                    onChanged: (value) {
+                      if (value != null) {
+                        setState(() {
+                          _selectedRole = value;
+                        });
+                      }
+                    },
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            TextFormField(
+              controller: _passwordController,
+              obscureText: true,
+              decoration: const InputDecoration(
+                labelText: 'Password',
+                border: OutlineInputBorder(),
+              ),
+              validator: (value) => value == null || value.trim().isEmpty ? 'Required' : null,
+            ),
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: isProcessing
+                    ? null
+                    : () {
+                        if (_userFormKey.currentState?.validate() != true) return;
+                        final user = UserPayload(
+                          email: _emailController.text.trim(),
+                          mobileNumber: _mobileController.text.trim(),
+                          password: _passwordController.text.trim(),
+                          role: _selectedRole,
+                          firstName: _firstNameController.text.trim(),
+                          lastName: _lastNameController.text.trim(),
+                        );
+
+                        context.read<AdministrationBloc>().add(
+                              CreateUser(
+                                tenantId: widget.tenant.id!,
+                                user: user,
+                              ),
+                            );
+                      },
+                icon: isProcessing
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                      )
+                    : const Icon(Icons.person_add_alt_1),
+                label: Text(isProcessing ? 'Working...' : 'Create User'),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAcademicYearListCard(
+    List<AcademicYear> academicYears,
+    AdministrationState adminState,
+    bool isAdminLoading,
+  ) {
+    return _SectionCard(
+      title: 'Academic Years',
+      subtitle: 'Recently published timelines',
+      action: IconButton(
+        tooltip: 'Refresh',
+        onPressed: () => context.read<AdministrationBloc>().add(LoadAcademicYears(widget.tenant.id!)),
+        icon: const Icon(Icons.refresh),
+      ),
+      child: isAdminLoading
+          ? const Center(child: CircularProgressIndicator())
+          : Column(
+              children: [
+                if (academicYears.isEmpty)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    child: Text(
+                      'No academic years have been created yet.',
+                      style: TextStyle(color: Colors.grey.shade700),
+                    ),
+                  )
+                else
+                  ...academicYears.map(
+                    (year) => Container(
+                      margin: const EdgeInsets.only(bottom: 10),
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: year.isActive ? const Color(0xFFE8F3FF) : Colors.grey.shade100,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: year.isActive ? const Color(0xFF2B88F0) : Colors.grey.shade300,
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(year.isActive ? Icons.check_circle : Icons.calendar_today,
+                              color: year.isActive ? const Color(0xFF2B88F0) : Colors.grey.shade700),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  year.year,
+                                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  '${year.startDate} → ${year.endDate}',
+                                  style: TextStyle(color: Colors.grey.shade700),
+                                ),
+                              ],
+                            ),
+                          ),
+                          if (year.isActive)
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF2B88F0).withOpacity(0.12),
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: const Text(
+                                'ACTIVE',
+                                style: TextStyle(color: Color(0xFF2B88F0), fontWeight: FontWeight.bold),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                  ),
+                if (adminState is AdministrationFailure)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 8),
+                    child: Text(
+                      adminState.error,
+                      style: const TextStyle(color: Colors.red),
+                    ),
+                  ),
+              ],
+            ),
     );
   }
 

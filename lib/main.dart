@@ -4,8 +4,10 @@ import 'bloc/tenant/tenant_bloc.dart';
 import 'bloc/dashboard/dashboard_bloc.dart';
 import 'repositories/tenant_repository.dart';
 import 'repositories/dashboard_repository.dart';
+import 'repositories/administration_repository.dart';
 import 'services/web_service.dart';
 import 'screens/tenants_screen.dart';
+import 'bloc/administration/administration_bloc.dart';
 
 void main() {
   runApp(const AdminConsoleApp());
@@ -31,6 +33,11 @@ class AdminConsoleApp extends StatelessWidget {
             webService: context.read<WebService>(),
           ),
         ),
+        RepositoryProvider<AdministrationRepository>(
+          create: (context) => AdministrationRepository(
+            webService: context.read<WebService>(),
+          ),
+        ),
       ],
       child: MultiBlocProvider(
         providers: [
@@ -42,6 +49,11 @@ class AdminConsoleApp extends StatelessWidget {
           BlocProvider<DashboardBloc>(
             create: (context) => DashboardBloc(
               dashboardRepository: context.read<DashboardRepository>(),
+            ),
+          ),
+          BlocProvider<AdministrationBloc>(
+            create: (context) => AdministrationBloc(
+              administrationRepository: context.read<AdministrationRepository>(),
             ),
           ),
         ],
