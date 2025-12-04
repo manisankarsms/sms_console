@@ -211,4 +211,53 @@ class WebService {
       throw Exception('Network error: $e');
     }
   }
+
+  Future<String> postDataWithTenantId(String endpoint, String data, String tenantId) async {
+    try {
+      final sanitizedBaseUrl = baseUrl.replaceAll(RegExp(r'/+$'), '');
+      final sanitizedEndpoint = endpoint.replaceAll(RegExp(r'^/+'), '');
+      final uri = Uri.parse('$sanitizedBaseUrl/$sanitizedEndpoint');
+
+      if (kDebugMode) {
+        print('POST URL: $uri');
+        print('X-Tenant: ${tenantId.trim()}');
+        print('POST Data: $data');
+      }
+
+      final response = await http.post(
+        uri,
+        headers: <String, String>{
+          'Content-Type': 'application/json; charset=UTF-8',
+          'X-Tenant': tenantId.trim(),
+        },
+        body: data,
+      );
+
+      if (kDebugMode) {
+        print('Response Status: ${response.statusCode}');
+        print('Response Body: ${response.body}');
+      }
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return response.body;
+      } else {
+        try {
+          final errorData = jsonDecode(response.body);
+          if (errorData['error'] != null) {
+            throw Exception(errorData['error']['message'] ?? 'Server error');
+          } else {
+            throw Exception('HTTP ${response.statusCode}: ${response.reasonPhrase}');
+          }
+        } catch (e) {
+          if (e is Exception) rethrow;
+          throw Exception('HTTP ${response.statusCode}: ${response.reasonPhrase}');
+        }
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print("Error in postDataWithTenantId: $e");
+      }
+      rethrow;
+    }
+  }
 }
