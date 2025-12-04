@@ -2,12 +2,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
-import '../bloc/dashboard/dashboard_bloc.dart';
-import '../bloc/dashboard/dashboard_event.dart';
-import '../bloc/dashboard/dashboard_state.dart';
 import '../bloc/administration/administration_bloc.dart';
 import '../bloc/administration/administration_event.dart';
 import '../bloc/administration/administration_state.dart';
+import '../bloc/dashboard/dashboard_bloc.dart';
+import '../bloc/dashboard/dashboard_event.dart';
+import '../bloc/dashboard/dashboard_state.dart';
 import '../models/administration.dart';
 import '../models/dashboard.dart';
 import '../models/tenant.dart';
@@ -15,10 +15,7 @@ import '../models/tenant.dart';
 class DashboardScreen extends StatefulWidget {
   final Tenant tenant;
 
-  const DashboardScreen({
-    super.key,
-    required this.tenant,
-  });
+  const DashboardScreen({super.key, required this.tenant});
 
   @override
   State<DashboardScreen> createState() => _DashboardScreenState();
@@ -48,7 +45,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
   @override
   void initState() {
     super.initState();
-    // Load dashboard data with tenant ID
     context.read<DashboardBloc>().add(LoadDashboardData(widget.tenant.id!));
     context.read<AdministrationBloc>().add(LoadAcademicYears(widget.tenant.id!));
     context.read<AdministrationBloc>().add(LoadAdminUsers(widget.tenant.id!));
@@ -83,9 +79,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     _yearController.text = _selectedYearOption ?? '';
     _startDateController.clear();
     _endDateController.clear();
-    setState(() {
-      _isAcademicYearActive = true;
-    });
+    setState(() => _isAcademicYearActive = true);
   }
 
   void _resetUserForm() {
@@ -94,9 +88,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     _passwordController.clear();
     _firstNameController.clear();
     _lastNameController.clear();
-    setState(() {
-      _selectedRole = 'ADMIN';
-    });
+    setState(() => _selectedRole = 'ADMIN');
   }
 
   Future<void> _pickDate(TextEditingController controller, {DateTime? initialDate}) async {
@@ -120,17 +112,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
         title: const Text('Delete user'),
         content: const Text('Are you sure you want to remove this administrator?'),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel'),
-          ),
+          TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Cancel')),
           TextButton(
             style: TextButton.styleFrom(foregroundColor: Colors.red),
             onPressed: () {
-              context.read<AdministrationBloc>().add(DeleteUser(
-                    tenantId: widget.tenant.id!,
-                    userId: userId,
-                  ));
+              context.read<AdministrationBloc>().add(DeleteUser(tenantId: widget.tenant.id!, userId: userId));
               Navigator.of(context).pop();
             },
             child: const Text('Delete'),
@@ -143,18 +129,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF4F6FB),
+      backgroundColor: Colors.grey[50],
       appBar: AppBar(
         elevation: 0,
-        backgroundColor: Colors.transparent,
-        title: Text(
-          '${widget.tenant.name} Dashboard',
-          style: const TextStyle(fontWeight: FontWeight.w700, color: Colors.black87),
-        ),
-        centerTitle: false,
+        title: Text(widget.tenant.name, style: const TextStyle(fontWeight: FontWeight.w700)),
         actions: [
           IconButton(
-            icon: const Icon(Icons.refresh, color: Colors.black87),
+            icon: const Icon(Icons.refresh),
             onPressed: () => context.read<DashboardBloc>().add(LoadDashboardData(widget.tenant.id!)),
           ),
         ],
@@ -164,67 +145,46 @@ class _DashboardScreenState extends State<DashboardScreen> {
           BlocListener<AdministrationBloc, AdministrationState>(
             listener: (context, adminState) {
               if (adminState is AdministrationLoaded && adminState.message != null) {
-                if (adminState.message!.contains('Academic year')) {
-                  _resetAcademicYearForm();
-                }
-                if (adminState.message!.contains('User created')) {
-                  _resetUserForm();
-                }
+                if (adminState.message!.contains('Academic year')) _resetAcademicYearForm();
+                if (adminState.message!.contains('User created')) _resetUserForm();
                 ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(adminState.message!),
-                    backgroundColor: Colors.green,
-                  ),
+                  SnackBar(content: Text(adminState.message!), backgroundColor: Colors.green),
                 );
               } else if (adminState is AdministrationFailure) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(adminState.error),
-                    backgroundColor: Colors.red,
-                  ),
-                );
+                ScaffoldMessenger.of(context)
+                    .showSnackBar(SnackBar(content: Text(adminState.error), backgroundColor: Colors.red));
               }
             },
           ),
           BlocListener<DashboardBloc, DashboardState>(
             listener: (context, state) {
               if (state is DashboardOperationFailure) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(state.error),
-                    backgroundColor: Colors.red,
-                  ),
-                );
+                ScaffoldMessenger.of(context)
+                    .showSnackBar(SnackBar(content: Text(state.error), backgroundColor: Colors.red));
               }
             },
           ),
         ],
         child: BlocBuilder<DashboardBloc, DashboardState>(
           builder: (context, state) {
-            if (state is DashboardLoading) {
-              return const Center(child: CircularProgressIndicator());
-            } else if (state is DashboardLoaded) {
+            if (state is DashboardLoading) return const Center(child: CircularProgressIndicator());
+            if (state is DashboardLoaded) {
               return BlocBuilder<AdministrationBloc, AdministrationState>(
-                builder: (context, adminState) {
-                  return _buildDashboardContent(state.dashboardData, adminState);
-                },
+                builder: (context, adminState) => _buildDashboardContent(state.dashboardData, adminState),
               );
-            } else if (state is DashboardOperationFailure) {
+            }
+            if (state is DashboardOperationFailure) {
               return Center(
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Icon(Icons.error, size: 64, color: Colors.red),
-                    const SizedBox(height: 16),
-                    Text(
-                      "Error: ${state.error}",
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(color: Colors.red),
-                    ),
-                    const SizedBox(height: 16),
-                    ElevatedButton(
+                    const Icon(Icons.error_outline, color: Colors.red, size: 48),
+                    const SizedBox(height: 12),
+                    Text(state.error, textAlign: TextAlign.center),
+                    const SizedBox(height: 12),
+                    OutlinedButton(
                       onPressed: () => context.read<DashboardBloc>().add(LoadDashboardData(widget.tenant.id!)),
-                      child: const Text("Retry"),
+                      child: const Text('Retry'),
                     ),
                   ],
                 ),
@@ -240,1081 +200,400 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Widget _buildDashboardContent(DashboardData data, AdministrationState adminState) {
     final academicYears = _academicYearsFromState(adminState);
     final adminUsers = _adminUsersFromState(adminState);
-    final isAdminLoading = adminState is AdministrationLoading && academicYears.isEmpty && adminUsers.isEmpty;
-    return SingleChildScrollView(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _buildHeroHeader(data.overview),
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              children: [
-                _buildManagementSection(adminState, academicYears, adminUsers, isAdminLoading),
-                const SizedBox(height: 24),
-                _buildOverviewSection(data.overview),
-                const SizedBox(height: 24),
-                _buildStudentStatistics(data.studentStatistics),
-                const SizedBox(height: 24),
-                _buildStaffStatistics(data.staffStatistics),
-                const SizedBox(height: 24),
-                _buildExamStatistics(data.examStatistics),
-                const SizedBox(height: 24),
-                _buildAttendanceStatistics(data.attendanceStatistics),
-                const SizedBox(height: 24),
-                _buildComplaintStatistics(data.complaintStatistics),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  List<AcademicYear> _academicYearsFromState(AdministrationState state) {
-    if (state is AdministrationLoaded) {
-      return state.academicYears;
-    }
-    if (state is AdministrationOperationInProgress) {
-      return state.academicYears;
-    }
-    if (state is AdministrationFailure) {
-      return state.academicYears;
-    }
-    return [];
-  }
-
-  List<AdminUser> _adminUsersFromState(AdministrationState state) {
-    if (state is AdministrationLoaded) {
-      return state.adminUsers;
-    }
-    if (state is AdministrationOperationInProgress) {
-      return state.adminUsers;
-    }
-    if (state is AdministrationFailure) {
-      return state.adminUsers;
-    }
-    return [];
-  }
-
-  Widget _buildManagementSection(
-    AdministrationState adminState,
-    List<AcademicYear> academicYears,
-    List<AdminUser> adminUsers,
-    bool isAdminLoading,
-  ) {
     final isProcessing = adminState is AdministrationOperationInProgress;
-    final isUserOperation = isProcessing && adminState.message.toLowerCase().contains('user');
+    final isLoading = adminState is AdministrationLoading && academicYears.isEmpty && adminUsers.isEmpty;
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+    return ListView(
+      padding: const EdgeInsets.all(16),
       children: [
-        Row(
-          children: const [
-            Icon(Icons.settings, color: Colors.blueAccent),
-            SizedBox(width: 8),
-            Text(
-              'Setup & Administration',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
-            ),
-          ],
+        _Section(
+          title: 'Overview',
+          child: _metricGrid({
+            'Students': data.overview.totalStudents.toString(),
+            'Staff': data.overview.totalStaff.toString(),
+            'Classes': data.overview.totalClasses.toString(),
+            'Subjects': data.overview.totalSubjects.toString(),
+            'Attendance': '${data.overview.todayAttendanceRate.toStringAsFixed(1)}%',
+            'Active Years': data.overview.activeAcademicYears.toString(),
+          }),
         ),
         const SizedBox(height: 12),
-        LayoutBuilder(
-          builder: (context, constraints) {
-            final crossAxisCount = constraints.maxWidth > 1100
-                ? 3
-                : constraints.maxWidth > 780
-                    ? 2
-                    : 1;
-            final itemWidth = (constraints.maxWidth - (16 * (crossAxisCount - 1))) / crossAxisCount;
-
-            return Wrap(
-              spacing: 16,
-              runSpacing: 16,
-              children: [
-                SizedBox(
-                  width: itemWidth,
-                  child: _buildAcademicYearCard(isProcessing, isAdminLoading),
+        _Section(
+          title: 'Administration',
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              _CardShell(
+                title: 'Academic Year',
+                child: _buildAcademicYearForm(isProcessing, isLoading),
+              ),
+              const SizedBox(height: 12),
+              _CardShell(
+                title: 'Console User',
+                child: _buildUserForm(isProcessing),
+              ),
+              const SizedBox(height: 12),
+              _CardShell(title: 'Academic Years', child: _buildAcademicYearList(academicYears, adminState, isLoading)),
+              const SizedBox(height: 12),
+              _CardShell(title: 'Admin Users', child: _buildAdminUsers(adminUsers, adminState, isLoading)),
+            ],
+          ),
+        ),
+        const SizedBox(height: 12),
+        _Section(
+          title: 'Recent activity',
+          child: Column(
+            children: [
+              _CardShell(
+                title: 'Enrollments',
+                child: _simpleList(
+                  data.studentStatistics.recentEnrollments
+                      .map((e) => '${e.studentName} • ${e.className} (${e.academicYearName})')
+                      .toList(),
+                  emptyLabel: 'No enrollments logged',
                 ),
-                SizedBox(
-                  width: itemWidth,
-                  child: _buildUserCard(isProcessing),
-                ),
-                SizedBox(
-                  width: itemWidth,
-                  child: _buildAcademicYearListCard(academicYears, adminState, isAdminLoading),
-                ),
-                SizedBox(
-                  width: itemWidth,
-                  child: _buildAdminUsersCard(adminUsers, adminState, isAdminLoading || isUserOperation),
-                ),
-              ],
-            );
-          },
+              ),
+              const SizedBox(height: 12),
+              _CardShell(
+                title: 'Holidays',
+                child: _metricGrid({
+                  'Total': data.holidayStatistics.totalHolidays.toString(),
+                  'Upcoming': data.holidayStatistics.upcomingHolidays.toString(),
+                }),
+              ),
+              const SizedBox(height: 12),
+              _CardShell(
+                title: 'Complaints',
+                child: _metricGrid({
+                  'Filed': data.overview.totalComplaints.toString(),
+                  'Pending': data.overview.pendingComplaints.toString(),
+                  'Resolved': data.complaintStatistics.resolvedComplaints.toString(),
+                }),
+              ),
+            ],
+          ),
         ),
       ],
     );
   }
 
-  Widget _buildAcademicYearCard(bool isProcessing, bool isAdminLoading) {
-    return _SectionCard(
-      title: 'Create Academic Year',
-      subtitle: 'Publish academic windows that other modules can reference',
-      child: Form(
-        key: _academicYearFormKey,
-        child: Column(
-          children: [
-            DropdownButtonFormField<String>(
-              value: _selectedYearOption,
-              decoration: const InputDecoration(
-                labelText: 'Academic Year',
-                hintText: '2025-2026',
-                border: OutlineInputBorder(),
-              ),
-              items: [
-                ..._yearOptions.map((option) => DropdownMenuItem(value: option, child: Text(option))),
-                const DropdownMenuItem(value: 'custom', child: Text('Custom year label')),
-              ],
-              onChanged: isProcessing || isAdminLoading
-                  ? null
-                  : (value) {
-                      if (value == null) return;
-                      setState(() {
-                        _selectedYearOption = value;
-                        _useCustomYear = value == 'custom';
-                        if (!_useCustomYear) {
-                          _yearController.text = value;
-                        } else {
-                          _yearController.clear();
-                        }
-                      });
-                    },
-              validator: (value) {
-                if (_useCustomYear && _yearController.text.trim().isEmpty) {
-                  return 'Enter a custom year label';
-                }
-                if (!_useCustomYear && (value == null || value.isEmpty)) {
-                  return 'Select the academic year label';
-                }
-                return null;
-              },
-            ),
-            if (_useCustomYear) ...[
-              const SizedBox(height: 12),
-              TextFormField(
+  List<AcademicYear> _academicYearsFromState(AdministrationState state) {
+    if (state is AdministrationLoaded) return state.academicYears;
+    if (state is AdministrationOperationInProgress) return state.academicYears;
+    if (state is AdministrationFailure) return state.academicYears;
+    return [];
+  }
+
+  List<AdminUser> _adminUsersFromState(AdministrationState state) {
+    if (state is AdministrationLoaded) return state.adminUsers;
+    if (state is AdministrationOperationInProgress) return state.adminUsers;
+    if (state is AdministrationFailure) return state.adminUsers;
+    return [];
+  }
+
+  Widget _buildAcademicYearForm(bool isProcessing, bool isAdminLoading) {
+    return Form(
+      key: _academicYearFormKey,
+      child: Column(
+        children: [
+          DropdownButtonFormField<String>(
+            value: _selectedYearOption,
+            decoration: _fieldDecoration('Academic Year'),
+            items: [
+              ..._yearOptions.map((option) => DropdownMenuItem(value: option, child: Text(option))),
+              const DropdownMenuItem(value: 'custom', child: Text('Custom year label')),
+            ],
+            onChanged: isProcessing || isAdminLoading
+                ? null
+                : (value) {
+                    if (value == null) return;
+                    setState(() {
+                      _selectedYearOption = value;
+                      _useCustomYear = value == 'custom';
+                      _yearController.text = _useCustomYear ? '' : value;
+                    });
+                  },
+            validator: (value) {
+              if (_useCustomYear && _yearController.text.trim().isEmpty) return 'Enter a custom year label';
+              if (!_useCustomYear && (value == null || value.isEmpty)) return 'Select the academic year label';
+              return null;
+            },
+          ),
+          if (_useCustomYear)
+            Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: TextFormField(
                 controller: _yearController,
-                decoration: const InputDecoration(
-                  labelText: 'Custom Academic Year',
-                  hintText: 'e.g., 2025-2026',
-                  border: OutlineInputBorder(),
+                decoration: _fieldDecoration('Custom Academic Year'),
+                validator: (value) => value == null || value.trim().isEmpty ? 'Required' : null,
+              ),
+            ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(
+                child: TextFormField(
+                  controller: _startDateController,
+                  readOnly: true,
+                  onTap: isProcessing || isAdminLoading
+                      ? null
+                      : () => _pickDate(_startDateController, initialDate: DateTime.tryParse(_startDateController.text)),
+                  decoration: _fieldDecoration('Start Date').copyWith(suffixIcon: const Icon(Icons.calendar_today_rounded)),
+                  validator: (value) => value == null || value.trim().isEmpty ? 'Required' : null,
                 ),
-                validator: (value) {
-                  if (!_useCustomYear) return null;
-                  if (value == null || value.trim().isEmpty) {
-                    return 'Enter the academic year label';
-                  }
-                  return null;
-                },
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: TextFormField(
+                  controller: _endDateController,
+                  readOnly: true,
+                  onTap: isProcessing || isAdminLoading
+                      ? null
+                      : () => _pickDate(_endDateController, initialDate: DateTime.tryParse(_endDateController.text)),
+                  decoration: _fieldDecoration('End Date').copyWith(suffixIcon: const Icon(Icons.calendar_today_rounded)),
+                  validator: (value) => value == null || value.trim().isEmpty ? 'Required' : null,
+                ),
               ),
             ],
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                Expanded(
-                  child: TextFormField(
-                    controller: _startDateController,
-                    readOnly: true,
-                    onTap: isProcessing || isAdminLoading
-                        ? null
-                        : () => _pickDate(
-                              _startDateController,
-                              initialDate: DateTime.tryParse(_startDateController.text),
-                            ),
-                    decoration: const InputDecoration(
-                      labelText: 'Start Date',
-                      hintText: 'YYYY-MM-DD',
-                      border: OutlineInputBorder(),
-                      suffixIcon: Icon(Icons.calendar_today_rounded),
-                    ),
-                    validator: (value) => value == null || value.trim().isEmpty ? 'Required' : null,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: TextFormField(
-                    controller: _endDateController,
-                    readOnly: true,
-                    onTap: isProcessing || isAdminLoading
-                        ? null
-                        : () => _pickDate(
-                              _endDateController,
-                              initialDate: DateTime.tryParse(_endDateController.text),
-                            ),
-                    decoration: const InputDecoration(
-                      labelText: 'End Date',
-                      hintText: 'YYYY-MM-DD',
-                      border: OutlineInputBorder(),
-                      suffixIcon: Icon(Icons.calendar_today_rounded),
-                    ),
-                    validator: (value) => value == null || value.trim().isEmpty ? 'Required' : null,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            SwitchListTile(
-              contentPadding: EdgeInsets.zero,
-              value: _isAcademicYearActive,
-              onChanged: (value) {
-                setState(() {
-                  _isAcademicYearActive = value;
-                });
-              },
-              title: const Text('Mark as active'),
-              subtitle: const Text('Sets this year as the active calendar for the tenant'),
-            ),
-            const SizedBox(height: 8),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                onPressed: isProcessing || isAdminLoading
-                    ? null
-                    : () {
-                        if (_academicYearFormKey.currentState?.validate() != true) return;
-                        final selectedYear = _useCustomYear ? _yearController.text.trim() : (_selectedYearOption ?? '');
-                        if (selectedYear.isEmpty) return;
-                        final academicYear = AcademicYear(
-                          year: selectedYear,
-                          startDate: _startDateController.text.trim(),
-                          endDate: _endDateController.text.trim(),
-                          isActive: _isAcademicYearActive,
-                        );
-
-                        context.read<AdministrationBloc>().add(
-                              CreateAcademicYear(
-                                tenantId: widget.tenant.id!,
-                                academicYear: academicYear,
-                              ),
-                            );
-                      },
-                icon: isProcessing || isAdminLoading
-                    ? const SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                      )
-                    : const Icon(Icons.save),
-                label: Text(isProcessing || isAdminLoading ? 'Working...' : 'Create Academic Year'),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildUserCard(bool isProcessing) {
-    return _SectionCard(
-      title: 'Create Console User',
-      subtitle: 'Quickly provision administrators for this tenant',
-      child: Form(
-        key: _userFormKey,
-        child: Column(
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: TextFormField(
-                    controller: _firstNameController,
-                    decoration: const InputDecoration(
-                      labelText: 'First Name',
-                      border: OutlineInputBorder(),
-                    ),
-                    validator: (value) => value == null || value.trim().isEmpty ? 'Required' : null,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: TextFormField(
-                    controller: _lastNameController,
-                    decoration: const InputDecoration(
-                      labelText: 'Last Name',
-                      border: OutlineInputBorder(),
-                    ),
-                    validator: (value) => value == null || value.trim().isEmpty ? 'Required' : null,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            TextFormField(
-              controller: _emailController,
-              decoration: const InputDecoration(
-                labelText: 'Email',
-                border: OutlineInputBorder(),
-              ),
-              validator: (value) {
-                if (value == null || value.trim().isEmpty) return 'Required';
-                if (!value.contains('@')) return 'Enter a valid email';
-                return null;
-              },
-            ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                Expanded(
-                  child: TextFormField(
-                    controller: _mobileController,
-                    decoration: const InputDecoration(
-                      labelText: 'Mobile Number',
-                      border: OutlineInputBorder(),
-                    ),
-                    validator: (value) => value == null || value.trim().isEmpty ? 'Required' : null,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: DropdownButtonFormField<String>(
-                    value: _selectedRole,
-                    decoration: const InputDecoration(
-                      labelText: 'Role',
-                      border: OutlineInputBorder(),
-                    ),
-                    items: const [
-                      DropdownMenuItem(value: 'ADMIN', child: Text('ADMIN')),
-                    ],
-                    onChanged: (value) {
-                      if (value != null) {
-                        setState(() {
-                          _selectedRole = value;
-                        });
-                      }
+          ),
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            value: _isAcademicYearActive,
+            onChanged: (value) => setState(() => _isAcademicYearActive = value),
+            title: const Text('Mark as active'),
+          ),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: isProcessing || isAdminLoading
+                  ? null
+                  : () {
+                      if (_academicYearFormKey.currentState?.validate() != true) return;
+                      final selectedYear = _useCustomYear ? _yearController.text.trim() : (_selectedYearOption ?? '');
+                      if (selectedYear.isEmpty) return;
+                      final academicYear = AcademicYear(
+                        year: selectedYear,
+                        startDate: _startDateController.text.trim(),
+                        endDate: _endDateController.text.trim(),
+                        isActive: _isAcademicYearActive,
+                      );
+                      context.read<AdministrationBloc>().add(
+                            CreateAcademicYear(tenantId: widget.tenant.id!, academicYear: academicYear),
+                          );
                     },
-                  ),
-                ),
-              ],
+              child: Text(isProcessing || isAdminLoading ? 'Working...' : 'Create Academic Year'),
             ),
-            const SizedBox(height: 12),
-            TextFormField(
-              controller: _passwordController,
-              obscureText: true,
-              decoration: const InputDecoration(
-                labelText: 'Password',
-                border: OutlineInputBorder(),
-              ),
-              validator: (value) => value == null || value.trim().isEmpty ? 'Required' : null,
-            ),
-            const SizedBox(height: 12),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                onPressed: isProcessing
-                    ? null
-                    : () {
-                        if (_userFormKey.currentState?.validate() != true) return;
-                        final user = UserPayload(
-                          email: _emailController.text.trim(),
-                          mobileNumber: _mobileController.text.trim(),
-                          password: _passwordController.text.trim(),
-                          role: _selectedRole,
-                          firstName: _firstNameController.text.trim(),
-                          lastName: _lastNameController.text.trim(),
-                        );
-
-                        context.read<AdministrationBloc>().add(
-                              CreateUser(
-                                tenantId: widget.tenant.id!,
-                                user: user,
-                              ),
-                            );
-                      },
-                icon: isProcessing
-                    ? const SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                      )
-                    : const Icon(Icons.person_add_alt_1),
-                label: Text(isProcessing ? 'Working...' : 'Create User'),
-              ),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
 
-  Widget _buildAcademicYearListCard(
-    List<AcademicYear> academicYears,
-    AdministrationState adminState,
-    bool isAdminLoading,
-  ) {
-    return _SectionCard(
-      title: 'Academic Years',
-      subtitle: 'Recently published timelines',
-      action: IconButton(
-        tooltip: 'Refresh',
-        onPressed: () => context.read<AdministrationBloc>().add(LoadAcademicYears(widget.tenant.id!)),
-        icon: const Icon(Icons.refresh),
-      ),
-      child: isAdminLoading
-          ? const Center(child: CircularProgressIndicator())
-          : Column(
-              children: [
-                if (academicYears.isEmpty)
-                  Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 8),
-                    child: Text(
-                      'No academic years have been created yet.',
-                      style: TextStyle(color: Colors.grey.shade700),
-                    ),
-                  )
-                else
-                  ...academicYears.map(
-                    (year) => Container(
-                      margin: const EdgeInsets.only(bottom: 10),
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: year.isActive ? const Color(0xFFE8F3FF) : Colors.grey.shade100,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                          color: year.isActive ? const Color(0xFF2B88F0) : Colors.grey.shade300,
-                        ),
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(year.isActive ? Icons.check_circle : Icons.calendar_today,
-                              color: year.isActive ? const Color(0xFF2B88F0) : Colors.grey.shade700),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  year.year,
-                                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  '${year.startDate} → ${year.endDate}',
-                                  style: TextStyle(color: Colors.grey.shade700),
-                                ),
-                              ],
-                            ),
-                          ),
-                          if (year.isActive)
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFF2B88F0).withOpacity(0.12),
-                                borderRadius: BorderRadius.circular(20),
-                              ),
-                              child: const Text(
-                                'ACTIVE',
-                                style: TextStyle(color: Color(0xFF2B88F0), fontWeight: FontWeight.bold),
-                              ),
-                            ),
-                        ],
-                      ),
-                    ),
-                  ),
-                if (adminState is AdministrationFailure)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 8),
-                    child: Text(
-                      adminState.error,
-                      style: const TextStyle(color: Colors.red),
-                    ),
-                  ),
-              ],
+  Widget _buildUserForm(bool isProcessing) {
+    return Form(
+      key: _userFormKey,
+      child: Column(
+        children: [
+          Row(
+            children: [
+              Expanded(child: _simpleField(_firstNameController, 'First Name')),
+              const SizedBox(width: 8),
+              Expanded(child: _simpleField(_lastNameController, 'Last Name')),
+            ],
+          ),
+          const SizedBox(height: 8),
+          _simpleField(_emailController, 'Email', keyboardType: TextInputType.emailAddress, validator: (value) {
+            if (value == null || value.trim().isEmpty) return 'Required';
+            if (!value.contains('@')) return 'Invalid email';
+            return null;
+          }),
+          const SizedBox(height: 8),
+          _simpleField(_mobileController, 'Mobile', keyboardType: TextInputType.phone),
+          const SizedBox(height: 8),
+          _simpleField(_passwordController, 'Password', obscureText: true),
+          const SizedBox(height: 8),
+          DropdownButtonFormField<String>(
+            value: _selectedRole,
+            decoration: _fieldDecoration('Role'),
+            items: const [
+              DropdownMenuItem(value: 'ADMIN', child: Text('Administrator')),
+              DropdownMenuItem(value: 'OPERATOR', child: Text('Operator')),
+            ],
+            onChanged: isProcessing ? null : (value) => setState(() => _selectedRole = value ?? 'ADMIN'),
+          ),
+          const SizedBox(height: 8),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: isProcessing
+                  ? null
+                  : () {
+                      if (_userFormKey.currentState?.validate() != true) return;
+                      final user = AdminUser(
+                        email: _emailController.text.trim(),
+                        mobileNumber: _mobileController.text.trim(),
+                        password: _passwordController.text.trim(),
+                        role: _selectedRole,
+                        firstName: _firstNameController.text.trim(),
+                        lastName: _lastNameController.text.trim(),
+                      );
+                      context.read<AdministrationBloc>().add(CreateUser(tenantId: widget.tenant.id!, user: user));
+                    },
+              child: Text(isProcessing ? 'Saving...' : 'Create User'),
             ),
+          ),
+        ],
+      ),
     );
   }
 
-  Widget _buildAdminUsersCard(
-    List<AdminUser> adminUsers,
-    AdministrationState adminState,
-    bool isLoading,
-  ) {
-    return _SectionCard(
-      title: 'Admin Users',
-      subtitle: 'Manage console administrators',
-      action: IconButton(
-        tooltip: 'Refresh',
-        onPressed: isLoading
-            ? null
-            : () => context.read<AdministrationBloc>().add(LoadAdminUsers(widget.tenant.id!)),
-        icon: const Icon(Icons.refresh),
-      ),
-      child: isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : Column(
-              children: [
-                if (adminUsers.isEmpty)
-                  Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 8),
-                    child: Text(
-                      'No admin users found for this tenant.',
-                      style: TextStyle(color: Colors.grey.shade700),
-                    ),
-                  )
-                else
-                  ...adminUsers.map(
-                    (user) => Container(
-                      margin: const EdgeInsets.only(bottom: 10),
-                      padding: const EdgeInsets.all(12),
+  Widget _buildAcademicYearList(List<AcademicYear> academicYears, AdministrationState adminState, bool isLoading) {
+    if (isLoading) return const Center(child: CircularProgressIndicator());
+    if (academicYears.isEmpty) return const Padding(padding: EdgeInsets.all(8), child: Text('No academic years yet.'));
+    return Column(
+      children: academicYears
+          .map(
+            (year) => ListTile(
+              contentPadding: const EdgeInsets.symmetric(horizontal: 4),
+              leading: Icon(year.isActive ? Icons.check_circle : Icons.calendar_today,
+                  color: year.isActive ? Colors.green : Colors.grey[700]),
+              title: Text(year.year, style: const TextStyle(fontWeight: FontWeight.w600)),
+              subtitle: Text('${year.startDate} → ${year.endDate}'),
+              trailing: year.isActive ? const Chip(label: Text('Active')) : null,
+            ),
+          )
+          .toList(),
+    );
+  }
+
+  Widget _buildAdminUsers(List<AdminUser> adminUsers, AdministrationState adminState, bool isLoading) {
+    final isDeleting = adminState is AdministrationOperationInProgress && adminState.message.toLowerCase().contains('user');
+    if (isLoading || isDeleting) return const Center(child: CircularProgressIndicator());
+    if (adminUsers.isEmpty) return const Padding(padding: EdgeInsets.all(8), child: Text('No admin users yet.'));
+    return Column(
+      children: adminUsers
+          .map(
+            (user) => ListTile(
+              contentPadding: const EdgeInsets.symmetric(horizontal: 4),
+              leading: CircleAvatar(child: Text(user.firstName.isNotEmpty ? user.firstName[0].toUpperCase() : '?')),
+              title: Text('${user.firstName} ${user.lastName}'.trim()),
+              subtitle: Text('${user.email} • ${user.mobileNumber}'),
+              trailing: IconButton(
+                icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
+                onPressed: () => _confirmDeleteUser(user.id),
+              ),
+            ),
+          )
+          .toList(),
+    );
+  }
+
+  Widget _simpleList(List<String> items, {String emptyLabel = 'Nothing to show'}) {
+    if (items.isEmpty) return Padding(padding: const EdgeInsets.all(8), child: Text(emptyLabel));
+    return Column(
+      children: items
+          .map((item) => ListTile(
+                dense: true,
+                leading: const Icon(Icons.bolt_outlined, size: 18),
+                title: Text(item),
+              ))
+          .toList(),
+    );
+  }
+
+  InputDecoration _fieldDecoration(String label) => InputDecoration(labelText: label, filled: true, border: const OutlineInputBorder());
+
+  Widget _simpleField(TextEditingController controller, String label,
+      {bool obscureText = false, TextInputType? keyboardType, String? Function(String?)? validator}) {
+    return TextFormField(
+      controller: controller,
+      decoration: _fieldDecoration(label),
+      obscureText: obscureText,
+      keyboardType: keyboardType,
+      validator: validator ?? (value) => value == null || value.trim().isEmpty ? 'Required' : null,
+    );
+  }
+
+  Widget _metricGrid(Map<String, String> items) {
+    final entries = items.entries.toList();
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final crossAxisCount = constraints.maxWidth > 900
+            ? 3
+            : constraints.maxWidth > 600
+                ? 2
+                : 1;
+        final itemWidth = (constraints.maxWidth - (12 * (crossAxisCount - 1))) / crossAxisCount;
+        return Wrap(
+          spacing: 12,
+          runSpacing: 12,
+          children: entries
+              .map((entry) => SizedBox(
+                    width: itemWidth,
+                    child: Container(
+                      padding: const EdgeInsets.all(14),
                       decoration: BoxDecoration(
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: Colors.grey.shade300),
+                        border: Border.all(color: Colors.grey.shade200),
                       ),
-                      child: Row(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          CircleAvatar(
-                            backgroundColor: const Color(0xFF2B88F0).withOpacity(0.12),
-                            child: Text(user.firstName.isNotEmpty ? user.firstName[0].toUpperCase() : '?'),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  '${user.firstName} ${user.lastName}'.trim(),
-                                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
-                                ),
-                                const SizedBox(height: 2),
-                                Text(user.email, style: TextStyle(color: Colors.grey.shade700)),
-                                const SizedBox(height: 2),
-                                Text('Mobile: ${user.mobileNumber}', style: TextStyle(color: Colors.grey.shade700)),
-                              ],
-                            ),
-                          ),
-                          IconButton(
-                            tooltip: 'Delete user',
-                            onPressed: isLoading ? null : () => _confirmDeleteUser(user.id),
-                            icon: const Icon(Icons.delete, color: Colors.redAccent),
-                          ),
+                          Text(entry.key, style: TextStyle(color: Colors.grey[700])),
+                          const SizedBox(height: 6),
+                          Text(entry.value, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700)),
                         ],
                       ),
                     ),
-                  ),
-                if (adminState is AdministrationFailure)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 8),
-                    child: Text(
-                      adminState.error,
-                      style: const TextStyle(color: Colors.red),
-                    ),
-                  ),
-              ],
-            ),
+                  ))
+              .toList(),
+        );
+      },
     );
   }
+}
 
-  Widget _buildHeroHeader(Overview overview) {
-    return Container(
-      width: double.infinity,
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 22),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(18),
-        gradient: const LinearGradient(
-          colors: [Color(0xFF2B88F0), Color(0xFF6FC8FB)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.blue.withOpacity(0.18),
-            blurRadius: 18,
-            offset: const Offset(0, 12),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.15),
-                  shape: BoxShape.circle,
-                  border: Border.all(color: Colors.white.withOpacity(0.2)),
-                ),
-                child: const Icon(Icons.dashboard_customize, color: Colors.white, size: 28),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: const [
-                    Text(
-                      'Your organization at a glance',
-                      style: TextStyle(color: Colors.white70, fontSize: 13),
-                    ),
-                    SizedBox(height: 4),
-                    Text(
-                      'Dashboard Overview',
-                      style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
-                    ),
-                  ],
-                ),
-              ),
-              Chip(
-                backgroundColor: Colors.white,
-                label: Text(
-                  'Total ${overview.totalStudents + overview.totalStaff}',
-                  style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF1F5AD5)),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 18),
-          Row(
-            children: [
-              Expanded(
-                child: _buildHeroTile(
-                  title: 'Students',
-                  value: overview.totalStudents.toString(),
-                  icon: Icons.school,
-                  color: Colors.white,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: _buildHeroTile(
-                  title: 'Staff',
-                  value: overview.totalStaff.toString(),
-                  icon: Icons.badge,
-                  color: Colors.white,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: _buildHeroTile(
-                  title: 'Classes',
-                  value: overview.totalClasses.toString(),
-                  icon: Icons.class_,
-                  color: Colors.white,
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
+class _Section extends StatelessWidget {
+  final String title;
+  final Widget child;
+
+  const _Section({required this.title, required this.child});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
+        const SizedBox(height: 8),
+        child,
+      ],
     );
   }
+}
 
-  Widget _buildHeroTile({
-    required String title,
-    required String value,
-    required IconData icon,
-    required Color color,
-  }) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.12),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.white.withOpacity(0.35)),
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.28),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(icon, color: Colors.white, size: 20),
-          ),
-          const SizedBox(width: 12),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                value,
-                style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w700),
-              ),
-              Text(title, style: const TextStyle(color: Colors.white70, fontSize: 12)),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
+class _CardShell extends StatelessWidget {
+  final String title;
+  final Widget child;
 
-  Widget _buildOverviewSection(Overview overview) {
-    return _SectionCard(
-      title: 'Overview',
-      subtitle: 'Key metrics from across your school',
-      child: GridView.count(
-        shrinkWrap: true,
-        physics: const NeverScrollableScrollPhysics(),
-        crossAxisCount: 2,
-        childAspectRatio: 3,
-        crossAxisSpacing: 16,
-        mainAxisSpacing: 16,
-        children: [
-          _buildStatCard('Total Students', overview.totalStudents.toString(), Icons.school, Colors.indigo),
-          _buildStatCard('Total Staff', overview.totalStaff.toString(), Icons.people, Colors.teal),
-          _buildStatCard('Total Classes', overview.totalClasses.toString(), Icons.class_, Colors.deepPurple),
-          _buildStatCard('Total Subjects', overview.totalSubjects.toString(), Icons.subject, Colors.orange),
-          _buildStatCard('Upcoming Exams', overview.upcomingExams.toString(), Icons.quiz, Colors.blue),
-          _buildStatCard('Total Complaints', overview.totalComplaints.toString(), Icons.report, Colors.pink),
-        ],
-      ),
-    );
-  }
+  const _CardShell({required this.title, required this.child});
 
-  Widget _buildStatCard(String title, String value, IconData icon, Color accent) {
+  @override
+  Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: accent.withOpacity(0.08),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: accent.withOpacity(0.12)),
-        boxShadow: [
-          BoxShadow(
-            color: accent.withOpacity(0.08),
-            blurRadius: 12,
-            offset: const Offset(0, 6),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: accent.withOpacity(0.15),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(icon, color: accent, size: 20),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  value,
-                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87),
-                ),
-                Text(
-                  title,
-                  style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildStudentStatistics(StudentStatistics stats) {
-    return _SectionCard(
-      title: 'Student Statistics',
-      subtitle: 'Keep an eye on enrollment and class distribution',
-      action: Chip(
-        backgroundColor: Colors.indigo.withOpacity(0.12),
-        label: Text(
-          '${stats.totalStudents} total',
-          style: const TextStyle(color: Colors.indigo, fontWeight: FontWeight.w600),
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text('Students by Class', style: TextStyle(fontWeight: FontWeight.w700)),
-          const SizedBox(height: 12),
-          ...stats.studentsByClass.map(
-            (classData) => _LabeledStatRow(
-              label: 'Class ${classData.className}-${classData.sectionName}',
-              value: '${classData.studentCount} students',
-            ),
-          ),
-          if (stats.recentEnrollments.isNotEmpty) ...[
-            const SizedBox(height: 16),
-            const Text('Recent Enrollments', style: TextStyle(fontWeight: FontWeight.w700)),
-            const SizedBox(height: 10),
-            ...stats.recentEnrollments.take(3).map(
-              (enrollment) => _LabeledStatRow(
-                label: enrollment.studentName,
-                value: 'Class ${enrollment.className}-${enrollment.sectionName}',
-              ),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-
-  Widget _buildStaffStatistics(StaffStatistics stats) {
-    return _SectionCard(
-      title: 'Staff Statistics',
-      subtitle: 'Breakdown by roles and teaching duties',
-      action: Chip(
-        backgroundColor: Colors.teal.withOpacity(0.12),
-        label: Text(
-          '${stats.totalStaff} total',
-          style: const TextStyle(color: Colors.teal, fontWeight: FontWeight.w600),
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text('Staff by Role', style: TextStyle(fontWeight: FontWeight.w700)),
-          const SizedBox(height: 12),
-          ...stats.staffByRole.map(
-            (roleData) => _LabeledStatRow(
-              label: roleData.role,
-              value: '${roleData.count} staff',
-            ),
-          ),
-          const SizedBox(height: 14),
-          Row(
-            children: [
-              _MiniPill(label: 'Class Teachers', value: stats.classTeachers.toString(), color: Colors.deepPurple),
-              const SizedBox(width: 10),
-              _MiniPill(label: 'Subject Teachers', value: stats.subjectTeachers.toString(), color: Colors.orange),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildExamStatistics(ExamStatistics stats) {
-    return _SectionCard(
-      title: 'Exam Statistics',
-      subtitle: 'Track progress across upcoming and completed exams',
-      action: Chip(
-        backgroundColor: Colors.orange.withOpacity(0.12),
-        label: Text(
-          '${stats.upcomingExams} upcoming',
-          style: const TextStyle(color: Colors.deepOrange, fontWeight: FontWeight.w600),
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              _MiniPill(label: 'Total Exams', value: stats.totalExams.toString(), color: Colors.orange),
-              _MiniPill(label: 'Upcoming', value: stats.upcomingExams.toString(), color: Colors.deepOrange),
-            ],
-          ),
-          const SizedBox(height: 14),
-          const Text('Exams by Subject', style: TextStyle(fontWeight: FontWeight.w700)),
-          const SizedBox(height: 10),
-          ...stats.examsBySubject.map(
-            (subjectData) => _LabeledStatRow(
-              label: subjectData.subjectName,
-              value: '${subjectData.examCount} exams',
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildAttendanceStatistics(AttendanceStatistics stats) {
-    return _SectionCard(
-      title: 'Attendance Statistics',
-      subtitle: 'Attendance health at a glance',
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              _MiniPill(
-                label: 'Today',
-                value: '${stats.todayAttendanceRate.toStringAsFixed(1)}%',
-                color: Colors.green,
-              ),
-              _MiniPill(
-                label: 'Weekly',
-                value: '${stats.weeklyAttendanceRate.toStringAsFixed(1)}%',
-                color: Colors.blue,
-              ),
-              _MiniPill(
-                label: 'Monthly',
-                value: '${stats.monthlyAttendanceRate.toStringAsFixed(1)}%',
-                color: Colors.indigo,
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildComplaintStatistics(ComplaintStatistics stats) {
-    return _SectionCard(
-      title: 'Complaint Statistics',
-      subtitle: 'Monitor feedback resolution progress',
-      action: Chip(
-        backgroundColor: Colors.pink.withOpacity(0.12),
-        label: Text(
-          '${stats.pendingComplaints} pending',
-          style: const TextStyle(color: Colors.pink, fontWeight: FontWeight.w600),
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              _MiniPill(label: 'Total', value: stats.totalComplaints.toString(), color: Colors.black87),
-              const SizedBox(width: 10),
-              _MiniPill(label: 'Resolved', value: stats.resolvedComplaints.toString(), color: Colors.green),
-            ],
-          ),
-          if (stats.complaintsByCategory.isNotEmpty) ...[
-            const SizedBox(height: 14),
-            const Text('By Category', style: TextStyle(fontWeight: FontWeight.w700)),
-            const SizedBox(height: 10),
-            ...stats.complaintsByCategory.map(
-              (categoryData) => _LabeledStatRow(
-                label: categoryData.category.toUpperCase(),
-                value: '${categoryData.count} complaints',
-              ),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-}
-
-class _SectionCard extends StatelessWidget {
-  final String title;
-  final String subtitle;
-  final Widget child;
-  final Widget? action;
-
-  const _SectionCard({
-    required this.title,
-    required this.subtitle,
-    required this.child,
-    this.action,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.04),
-            blurRadius: 18,
-            offset: const Offset(0, 8),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      subtitle,
-                      style: TextStyle(color: Colors.grey.shade600, fontSize: 13),
-                    ),
-                  ],
-                ),
-              ),
-              if (action != null) action!,
-            ],
-          ),
-          const SizedBox(height: 16),
-          child,
-        ],
-      ),
-    );
-  }
-}
-
-class _LabeledStatRow extends StatelessWidget {
-  final String label;
-  final String value;
-
-  const _LabeledStatRow({
-    required this.label,
-    required this.value,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Expanded(child: Text(label, style: const TextStyle(fontWeight: FontWeight.w500))),
-          const SizedBox(width: 12),
-          Text(
-            value,
-            style: TextStyle(color: Colors.grey.shade700),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _MiniPill extends StatelessWidget {
-  final String label;
-  final String value;
-  final Color color;
-
-  const _MiniPill({
-    required this.label,
-    required this.value,
-    required this.color,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.08),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withOpacity(0.18)),
+        border: Border.all(color: Colors.grey.shade200),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(label, style: TextStyle(color: color.withOpacity(0.8), fontWeight: FontWeight.w600)),
-          const SizedBox(height: 4),
-          Text(
-            value,
-            style: TextStyle(color: Colors.grey.shade900, fontWeight: FontWeight.bold, fontSize: 16),
-          ),
+          Text(title, style: const TextStyle(fontWeight: FontWeight.w700)),
+          const SizedBox(height: 10),
+          child,
         ],
       ),
     );
