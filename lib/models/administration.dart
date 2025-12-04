@@ -34,6 +34,41 @@ class AcademicYear {
   }
 }
 
+class AdminUser {
+  final String id;
+  final String email;
+  final String mobileNumber;
+  final String role;
+  final String firstName;
+  final String lastName;
+  final String? createdAt;
+  final String? updatedAt;
+
+  AdminUser({
+    required this.id,
+    required this.email,
+    required this.mobileNumber,
+    required this.role,
+    required this.firstName,
+    required this.lastName,
+    this.createdAt,
+    this.updatedAt,
+  });
+
+  factory AdminUser.fromJson(Map<String, dynamic> json) {
+    return AdminUser(
+      id: json['id']?.toString() ?? '',
+      email: json['email'] ?? '',
+      mobileNumber: json['mobileNumber']?.toString() ?? '',
+      role: json['role'] ?? '',
+      firstName: json['firstName'] ?? '',
+      lastName: json['lastName'] ?? '',
+      createdAt: json['createdAt']?.toString(),
+      updatedAt: json['updatedAt']?.toString(),
+    );
+  }
+}
+
 class UserPayload {
   final String email;
   final String mobileNumber;
