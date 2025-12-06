@@ -21,7 +21,7 @@ class AdminConsoleApp extends StatelessWidget {
     return MultiRepositoryProvider(
       providers: [
         RepositoryProvider<WebService>(
-          create: (context) => WebService(baseUrl: 'http://103.14.121.216:8080/api/v1'),
+          create: (context) => WebService(baseUrl: 'https://manisankarsms.co.in/api/v1'),
         ),
         RepositoryProvider<TenantRepository>(
           create: (context) => TenantRepository(
